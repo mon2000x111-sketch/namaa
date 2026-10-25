@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>نَماء — شجرة كسرية</title>
+<meta name="description" content="شجرة كسرية تنمو عند الفتح، تتمايل مع الريح، وفيها تحكم بالزاوية والعمق والطول والألوان والأوراق." />
+<meta name="theme-color" content="#0c1410" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230c1410'/%3E%3Cpath d='M16 27V14M16 20l-6-6M16 18l6-7M16 15l-4-6M16 14l5-6' stroke='%23e4b15a' stroke-width='1.7' stroke-linecap='round' fill='none'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0c1410;
+    --surface: #17211b;
+    --fg: #f4efe4;
+    --muted: #a3b0a4;
+    --accent: #e4b15a;
+    --accent-fg: #1a1408;
+    --line: rgba(244, 239, 228, 0.14);
+    --font: "IBM Plex Sans Arabic", "Segoe UI", sans-serif;
+    --display: "Amiri", "IBM Plex Sans Arabic", serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font-family: var(--font); }
+  body { min-height: 100dvh; }
+  button, input { font: inherit; }
+  button:not(:disabled) { cursor: pointer; }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .app {
+    display: grid;
+    grid-template-columns: 320px minmax(0, 1fr);
+    grid-template-areas: "panel stage";
+    min-height: 100dvh;
+  }
+  .stage { grid-area: stage; position: relative; min-height: 100dvh; background: var(--bg); }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .mark, .status { position: absolute; z-index: 2; pointer-events: none; }
+  .mark { top: 28px; right: 28px; text-shadow: 0 12px 32px rgba(0, 0, 0, 0.5); }
+  .kicker { margin: 0 0 4px; color: var(--accent); font-weight: 500; font-size: 0.92rem; }
+  .mark h1 { margin: 0; font-family: var(--display); font-size: clamp(3.2rem, 6vw, 5.4rem); font-weight: 700; line-height: 0.85; }
+  .status { bottom: 22px; right: 28px; color: var(--fg); opacity: 0.86; font-size: 0.95rem; }
+  .panel {
+    grid-area: panel;
+    background: var(--surface);
+    border-inline-end: 1px solid var(--line);
+    padding: 26px 22px calc(26px + env(safe-area-inset-bottom));
+    overflow: auto;
+    max-height: 100dvh;
+  }
+  .panel-head { margin-bottom: 22px; }
+  .lead { margin: 8px 0 0; color: var(--muted); line-height: 1.55; font-size: 0.95rem; }
+  fieldset { border: 0; margin: 0 0 22px; padding: 0; }
+  legend { padding: 0; margin: 0 0 12px; color: var(--muted); font-size: 0.82rem; font-weight: 500; }
+  .field { display: block; margin-bottom: 14px; }
+  .field-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 2px; }
+  .field-top span { font-weight: 500; }
+  .field-top b { color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+  input[type="range"] {
+    --p: 40%;
+    direction: ltr;
+    appearance: none;
+    width: 100%;
+    height: 44px;
+    margin: 0;
+    background: transparent;
+  }
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 4px; border-radius: 99px;
+    background: linear-gradient(to right, var(--accent) var(--p), rgba(244, 239, 228, 0.16) var(--p));
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    appearance: none; width: 22px; height: 22px; margin-top: -9px; border-radius: 50%;
+    background: var(--fg); border: 2px solid var(--accent);
+  }
+  input[type="range"]::-moz-range-track {
+    height: 4px; border-radius: 99px; border: 0;
+    background: linear-gradient(to right, var(--accent) var(--p), rgba(244, 239, 228, 0.16) var(--p));
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 22px; height: 22px; border-radius: 50%; background: var(--fg); border: 2px solid var(--accent);
+  }
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 6px; border-radius: 14px; background: rgba(244, 239, 228, 0.05); }
+  .seg button, .swatch {
+    border: 0; background: transparent; color: var(--muted); border-radius: 10px; transition: transform 150ms ease, background 150ms ease, color 150ms ease;
+  }
+  .seg button { height: 44px; font-weight: 500; }
+  .seg button[aria-pressed="true"] { background: rgba(244, 239, 228, 0.12); color: var(--fg); }
+  .seg button:active, .regen:active, .swatch:active { transform: scale(0.98); }
+  .swatches { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .swatch { height: 48px; padding: 0; display: flex; overflow: hidden; border-radius: 12px; }
+  .swatch[aria-pressed="true"] { outline: 2px solid var(--fg); outline-offset: 2px; }
+  .swatch i { flex: 1; display: block; }
+  .palette-name { margin: 10px 0 0; color: var(--fg); font-weight: 500; }
+  .regen {
+    width: 100%; height: 48px; border: 0; border-radius: 999px;
+    background: var(--accent); color: var(--accent-fg); font-weight: 600; font-size: 1rem;
+  }
+  .regen:hover { filter: brightness(1.06); }
+  .hint { margin: 12px 0 0; color: var(--muted); font-size: 0.8rem; line-height: 1.5; }
+  @media (max-width: 840px) {
+    .app { grid-template-columns: 1fr; grid-template-areas: "stage" "panel"; }
+    .stage { min-height: 68dvh; height: 68dvh; }
+    .panel { max-height: none; border-inline-end: 0; border-top: 1px solid var(--line); }
+    .mark { top: 16px; right: 16px; }
+    .mark h1 { font-size: 2.8rem; }
+    .status { right: 16px; bottom: 14px; }
+  }
+  @media (min-width: 841px) { body { overflow: hidden; } }
+  @media (prefers-reduced-motion: reduce) {
+    .seg button, .regen, .swatch { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="panel">
+    <header class="panel-head">
+      <p class="kicker">التحكم</p>
+      <p class="lead">غيّر الزاوية والعمق والطول. الشجرة تعيد رسم نفسها، والريح ما توقف.</p>
+    </header>
+    <fieldset>
+      <legend>التفرّع</legend>
+      <label class="field"><span class="field-top"><span>زاوية التفرع</span><b id="angle-val">26°</b></span>
+        <input id="angle" type="range" min="12" max="52" step="1" value="26" /></label>
+      <label class="field"><span class="field-top"><span>العمق</span><b id="depth-val">9</b></span>
+        <input id="depth" type="range" min="5" max="10" step="1" value="9" /></label>
+      <label class="field"><span class="field-top"><span>الطول</span><b id="length-val">22٪</b></span>
+        <input id="length" type="range" min="14" max="36" step="1" value="22" /></label>
+      <label class="field"><span class="field-top"><span>الريح</span><b id="wind-val">خفيف</b></span>
+        <input id="wind" type="range" min="0" max="100" step="1" value="42" /></label>
+    </fieldset>
+    <fieldset>
+      <legend>اللوحة</legend>
+      <div class="swatches" id="swatches"></div>
+      <p class="palette-name" id="palette-name"></p>
+    </fieldset>
+    <fieldset>
+      <legend>الطرف</legend>
+      <div class="seg" id="foliage">
+        <button type="button" data-foliage="none">غصن عارٍ</button>
+        <button type="button" data-foliage="leaves" aria-pressed="true">أوراق</button>
+        <button type="button" data-foliage="flowers">أزهار</button>
+      </div>
+    </fieldset>
+    <button class="regen" id="regen" type="button">أعد التوليد</button>
+    <p class="hint">مفتاح ر يعيد بذرة جديدة ويشغّل النمو من أول.</p>
+  </aside>
+  <section class="stage">
+    <canvas id="c" aria-label="شجرة كسرية متحركة"></canvas>
+    <div class="mark"><p class="kicker">حديقة كسرية</p><h1>نَماء</h1></div>
+    <p class="status" id="status" aria-live="polite">تنمو…</p>
+  </section>
+</div>
+<script>
+"use strict";
+const PALETTES = [
+  { name: "ربيع ليلي", skyTop: "#0e1c18", skyMid: "#163028", ground: "#0b1611", hill: "#10241c", hillFar: "#1a3328", trunk: "#3c2616", twig: "#c5deaf", leafA: "#e3f6d4", leafB: "#6ea868", petal: "#f6c1d0", heart: "#ffe08a", moon: "#f6f1e6" },
+  { name: "خريف حبر", skyTop: "#1a120c", skyMid: "#2a1a12", ground: "#120e0a", hill: "#2a1c12", hillFar: "#3a2818", trunk: "#2c160e", twig: "#e0a15a", leafA: "#f2b15a", leafB: "#c45c26", petal: "#e36a45", heart: "#f6d7a2", moon: "#f3e6d4" },
+  { name: "قمر فضي", skyTop: "#12161c", skyMid: "#1c2430", ground: "#10141a", hill: "#1a2230", hillFar: "#2a3548", trunk: "#4a4036", twig: "#e4d7c6", leafA: "#eef3ea", leafB: "#9aab9c", petal: "#fbf6ee", heart: "#e8c56b", moon: "#f7f4ee" },
+  { name: "حبر نيلي", skyTop: "#07111f", skyMid: "#10243c", ground: "#081018", hill: "#102033", hillFar: "#1a3a58", trunk: "#16324c", twig: "#8ec0dc", leafA: "#d5eef8", leafB: "#3d86b0", petal: "#e7f3fa", heart: "#f0d48a", moon: "#e7f0f6" },
+  { name: "ورد الجبل", skyTop: "#1a1016", skyMid: "#2a1822", ground: "#140c12", hill: "#2a1520", hillFar: "#4a2434", trunk: "#4a2432", twig: "#e7a9bc", leafA: "#f6d0dc", leafB: "#a85a72", petal: "#ffd0de", heart: "#ffe39a", moon: "#f8e8ee" }
+];
+function hexRgb(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+PALETTES.forEach((p) => { p.trunkRgb = hexRgb(p.trunk); p.twigRgb = hexRgb(p.twig); });
+function mix(a, b, t) {
+  const u = t < 0 ? 0 : t > 1 ? 1 : t;
+  return "rgb(" + ((a[0] + (b[0] - a[0]) * u) | 0) + "," + ((a[1] + (b[1] - a[1]) * u) | 0) + "," + ((a[2] + (b[2] - a[2]) * u) | 0) + ")";
+}
+function rng(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const state = { angle: 26, depth: 9, length: 22, wind: 42, foliage: "leaves", palette: 0, seed: (Math.random() * 1e9) | 0, growStart: 0 };
+let tree = null;
+let motes = [];
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d", { alpha: false });
+const statusEl = document.getElementById("status");
+let statusText = "";
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+function load() {
+  try {
+    const raw = localStorage.getItem("namaa-v1");
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    if (s.angle >= 12 && s.angle <= 52) state.angle = s.angle;
+    if (s.depth >= 5 && s.depth <= 10) state.depth = s.depth;
+    if (s.length >= 14 && s.length <= 36) state.length = s.length;
+    if (s.wind >= 0 && s.wind <= 100) state.wind = s.wind;
+    if (s.foliage === "none" || s.foliage === "leaves" || s.foliage === "flowers") state.foliage = s.foliage;
+    if (PALETTES[s.palette]) state.palette = s.palette;
+    if (typeof s.seed === "number") state.seed = s.seed >>> 0;
+  } catch (e) {}
+}
+function save() {
+  try {
+    localStorage.setItem("namaa-v1", JSON.stringify({
+      angle: state.angle, depth: state.depth, length: state.length, wind: state.wind,
+      foliage: state.foliage, palette: state.palette, seed: state.seed
+    }));
+  } catch (e) {}
+}
+function windWord(v) {
+  if (v < 8) return "ساكن";
+  if (v < 35) return "نسمة";
+  if (v < 70) return "خفيف";
+  return "نشيط";
+}
+function setStatus(text) {
+  if (text === statusText) return;
+  statusText = text;
+  statusEl.textContent = text;
+}
+function paintRange(input) {
+  const min = +input.min, max = +input.max, val = +input.value;
+  input.style.setProperty("--p", ((val - min) / (max - min)) * 100 + "%");
+}
+function syncControls() {
+  document.getElementById("angle").value = state.angle;
+  document.getElementById("depth").value = state.depth;
+  document.getElementById("length").value = state.length;
+  document.getElementById("wind").value = state.wind;
+  document.getElementById("angle-val").textContent = state.angle + "°";
+  document.getElementById("depth-val").textContent = String(state.depth);
+  document.getElementById("length-val").textContent = state.length + "٪";
+  document.getElementById("wind-val").textContent = windWord(state.wind);
+  ["angle", "depth", "length", "wind"].forEach((id) => paintRange(document.getElementById(id)));
+  document.querySelectorAll("#foliage button").forEach((btn) => {
+    btn.setAttribute("aria-pressed", btn.dataset.foliage === state.foliage ? "true" : "false");
+  });
+  document.querySelectorAll(".swatch").forEach((btn, i) => {
+    btn.setAttribute("aria-pressed", i === state.palette ? "true" : "false");
+  });
+  document.getElementById("palette-name").textContent = PALETTES[state.palette].name;
+}
+function buildMotes() {
+  const rand = rng(state.seed ^ 0x9e3779b9);
+  motes = [];
+  for (let i = 0; i < 22; i++) {
+    motes.push({ x: rand(), y: rand(), r: 0.6 + rand() * 1.5, s: 0.12 + rand() * 0.4, p: rand() * Math.PI * 2 });
+  }
+}
+function buildTree() {
+  const rand = rng(state.seed);
+  const spread = (state.angle * Math.PI) / 180;
+  const decay = 0.64 + rand() * 0.08;
+  function make(depth, length, width) {
+    const node = {
+      rel: 0, length: length, width: width, depth: depth,
+      bend: (rand() - 0.5) * 2, phase: rand() * Math.PI * 2, spin: rand() * Math.PI * 2,
+      leafN: 3 + ((rand() * 3) | 0), kids: [], tip: false, root: false
+    };
+    if (depth >= state.depth || length < 0.03) { node.tip = true; return node; }
+    const count = depth < 2 && rand() < 0.32 ? 3 : 2;
+    for (let i = 0; i < count; i++) {
+      const sign = count === 2 ? (i === 0 ? -1 : 1) : i - 1;
+      const child = make(depth + 1, length * decay * (0.9 + rand() * 0.18), width * (0.62 + rand() * 0.08));
+      child.rel = sign * spread * (0.78 + rand() * 0.4) + (rand() - 0.5) * spread * 0.5;
+      if (sign === 0) child.length *= 0.72;
+      node.kids.push(child);
+    }
+    return node;
+  }
+  tree = make(0, 1, 1);
+  tree.rel = -Math.PI / 2;
+  tree.root = true;
+  buildMotes();
+}
+function reveal(depth, maxDepth, grow) {
+  const span = 1 / (maxDepth + 1);
+  const start = depth * span * 0.9;
+  const end = start + span * 1.4;
+  const t = (grow - start) / (end - start);
+  return t < 0 ? 0 : t > 1 ? 1 : t;
+}
+function leafPath(c, len, wid) {
+  c.beginPath();
+  c.moveTo(0, 0);
+  c.quadraticCurveTo(len * 0.45, wid, len, 0);
+  c.quadraticCurveTo(len * 0.45, -wid, 0, 0);
+  c.fill();
+}
+function drawFoliage(c, x, y, angle, node, pal, mode, scale) {
+  c.save();
+  c.translate(x, y);
+  c.rotate(angle);
+  c.scale(scale, scale);
+  if (mode === "leaves" || mode === "flowers") {
+    const n = mode === "flowers" ? 2 : node.leafN;
+    const len = mode === "flowers" ? 11 : 16;
+    for (let i = 0; i < n; i++) {
+      c.save();
+      c.rotate((i - (n - 1) / 2) * 0.62);
+      c.fillStyle = i % 2 ? pal.leafA : pal.leafB;
+      leafPath(c, len + (i % 3) * 3, mode === "flowers" ? 4 : 5.4);
+      c.restore();
+    }
+  }
+  if (mode === "flowers") {
+    const sc = 0.82 + (node.leafN % 3) * 0.16;
+    c.rotate(node.spin);
+    c.scale(sc, sc);
+    c.fillStyle = pal.petal;
+    for (let i = 0; i < 5; i++) {
+      c.rotate((Math.PI * 2) / 5);
+      c.beginPath();
+      c.ellipse(8, 0, 6.4, 3.3, 0, 0, Math.PI * 2);
+      c.fill();
+    }
+    c.fillStyle = pal.heart;
+    c.beginPath();
+    c.arc(0, 0, 2.7, 0, Math.PI * 2);
+    c.fill();
+  }
+  c.restore();
+}
+function drawNode(c, node, x, y, parentStruct, grow, sec, wind, pal, trunkPx, scale) {
+  const t = reveal(node.depth, state.depth, grow);
+  if (t <= 0) return;
+  const eased = 1 - Math.pow(1 - t, 3);
+  const struct = node.root ? node.rel : parentStruct + node.rel;
+  const along = Math.pow((node.depth + 1) / (state.depth + 1), 1.2);
+  const sway = Math.sin(sec * 1.15 + node.phase) * wind * 0.58 * along + Math.sin(sec * 0.31) * wind * 0.26 * along;
+  const a = struct + sway;
+  const len = node.length * trunkPx * eased;
+  const x2 = x + Math.cos(a) * len;
+  const y2 = y + Math.sin(a) * len;
+  const px = Math.cos(a + Math.PI / 2);
+  const py = Math.sin(a + Math.PI / 2);
+  const mx = (x + x2) / 2 + px * len * 0.14 * node.bend;
+  const my = (y + y2) / 2 + py * len * 0.14 * node.bend;
+  const wpx = Math.max(0.8, node.width * trunkPx * 0.09 * (0.42 + 0.58 * eased));
+  c.lineCap = "round";
+  c.lineJoin = "round";
+  if (node.depth < 3) {
+    c.strokeStyle = "rgba(0,0,0,0.28)";
+    c.lineWidth = wpx + 2.4;
+    c.beginPath();
+    c.moveTo(x, y);
+    c.quadraticCurveTo(mx, my, x2, y2);
+    c.stroke();
+  }
+  c.strokeStyle = mix(pal.trunkRgb, pal.twigRgb, node.depth / state.depth);
+  c.lineWidth = wpx;
+  c.beginPath();
+  c.moveTo(x, y);
+  c.quadraticCurveTo(mx, my, x2, y2);
+  c.stroke();
+  if (node.tip && eased > 0.62 && state.foliage !== "none") drawFoliage(c, x2, y2, a, node, pal, state.foliage, scale);
+  for (let i = 0; i < node.kids.length; i++) drawNode(c, node.kids[i], x2, y2, struct, grow, sec, wind, pal, trunkPx, scale);
+}
+function resize() {
+  const rect = canvas.getBoundingClientRect();
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+  canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+}
+function draw(now) {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const w = canvas.width / dpr;
+  const h = canvas.height / dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const pal = PALETTES[state.palette];
+  const sky = ctx.createLinearGradient(0, 0, 0, h);
+  sky.addColorStop(0, pal.skyTop);
+  sky.addColorStop(0.55, pal.skyMid);
+  sky.addColorStop(1, pal.ground);
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, w, h);
+  const moon = ctx.createRadialGradient(w * 0.16, h * 0.16, 2, w * 0.16, h * 0.16, 70);
+  moon.addColorStop(0, pal.moon);
+  moon.addColorStop(0.25, pal.moon);
+  moon.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = moon;
+  ctx.beginPath();
+  ctx.arc(w * 0.16, h * 0.16, 70, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = pal.hillFar;
+  ctx.beginPath();
+  ctx.moveTo(0, h * 0.74);
+  ctx.quadraticCurveTo(w * 0.25, h * 0.62, w * 0.5, h * 0.74);
+  ctx.quadraticCurveTo(w * 0.75, h * 0.84, w, h * 0.68);
+  ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill();
+  ctx.fillStyle = pal.hill;
+  ctx.beginPath();
+  ctx.moveTo(0, h * 0.86);
+  ctx.quadraticCurveTo(w * 0.3, h * 0.76, w * 0.62, h * 0.88);
+  ctx.quadraticCurveTo(w * 0.82, h * 0.94, w, h * 0.82);
+  ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill();
+  const sec = now * 0.001;
+  ctx.fillStyle = pal.heart;
+  for (let i = 0; i < motes.length; i++) {
+    const m = motes[i];
+    const yy = (m.y + sec * 0.012 * m.s) % 1;
+    const xx = m.x + Math.sin(sec * 0.4 + m.p) * 0.012;
+    ctx.globalAlpha = 0.28;
+    ctx.beginPath();
+    ctx.arc(xx * w, yy * h * 0.8, m.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  const reduce = reduceMotion.matches;
+  const grow = reduce ? 1 : Math.min(1, (now - state.growStart) / 3400);
+  const growEase = reduce ? 1 : 1 - Math.pow(1 - grow, 3);
+  const wind = (state.wind / 100) * (reduce ? 0.25 : 1);
+  const trunkPx = (state.length / 100) * h * (8 / state.depth);
+  const scale = Math.max(0.72, Math.min(1.35, w / 1000));
+  if (tree) drawNode(ctx, tree, w * 0.5, h * 0.9, 0, growEase, sec, wind, pal, trunkPx, scale);
+  ctx.strokeStyle = pal.leafB;
+  ctx.lineWidth = 1.4;
+  ctx.globalAlpha = 0.7;
+  for (let i = 0; i < 11; i++) {
+    const gx = w * (0.38 + i * 0.022);
+    const gs = Math.sin(sec * 1.5 + i) * 8 * wind;
+    ctx.beginPath();
+    ctx.moveTo(gx, h * 0.92);
+    ctx.quadraticCurveTo(gx + gs, h * 0.87, gx + gs * 1.3, h * 0.83);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  const fog = ctx.createLinearGradient(0, h * 0.9, 0, h);
+  fog.addColorStop(0, "rgba(0,0,0,0)");
+  fog.addColorStop(1, pal.ground);
+  ctx.fillStyle = fog;
+  ctx.fillRect(0, h * 0.9, w, h * 0.1);
+  if (growEase < 1) setStatus("تنمو…");
+  else if (state.wind < 8) setStatus("ساكنة");
+  else setStatus("تتمايل مع الريح");
+}
+function frame(now) {
+  if (!document.hidden) draw(now);
+  if (!document.hidden) requestAnimationFrame(frame);
+}
+function regenerate() {
+  state.seed = (Math.random() * 1e9) | 0;
+  state.growStart = performance.now();
+  buildTree();
+  save();
+}
+function bootSwatches() {
+  const wrap = document.getElementById("swatches");
+  PALETTES.forEach((p, i) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "swatch";
+    btn.setAttribute("aria-label", p.name);
+    [p.trunk, p.twig, p.leafB, p.petal].forEach((color) => {
+      const slab = document.createElement("i");
+      slab.style.background = color;
+      btn.appendChild(slab);
+    });
+    btn.addEventListener("click", () => { state.palette = i; syncControls(); save(); });
+    wrap.appendChild(btn);
+  });
+}
+load();
+bootSwatches();
+syncControls();
+buildTree();
+state.growStart = performance.now();
+resize();
+["angle", "depth", "length", "wind"].forEach((id) => {
+  const input = document.getElementById(id);
+  input.addEventListener("input", () => {
+    state[id] = +input.value;
+    if (id !== "wind") buildTree();
+    syncControls();
+    save();
+  });
+});
+document.getElementById("foliage").addEventListener("click", (e) => {
+  const btn = e.target.closest("button");
+  if (!btn) return;
+  state.foliage = btn.dataset.foliage;
+  syncControls();
+  save();
+});
+document.getElementById("regen").addEventListener("click", regenerate);
+window.addEventListener("keydown", (e) => {
+  const tag = document.activeElement && document.activeElement.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA") return;
+  if (e.key === "r" || e.key === "R" || e.key === "ر") regenerate();
+});
+window.addEventListener("resize", resize);
+if (window.ResizeObserver) new ResizeObserver(resize).observe(canvas.parentElement);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) requestAnimationFrame(frame);
+});
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
